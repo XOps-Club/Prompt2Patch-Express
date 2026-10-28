@@ -1,0 +1,18 @@
+node_modules
+dist
+linksnip.db
+*.log
+.DS_Store
+
+# Contest config must always be tracked, even if a global gitignore ignores these
+!.github/
+!.vscode/
+!.vscode/*
+!.devcontainer/
+!.claude/
+!.claude/settings.json
+!AGENTS.md
+!CLAUDE.md
+!.cursorignore
+!.codeiumignore
+.claude/settings.local.json
