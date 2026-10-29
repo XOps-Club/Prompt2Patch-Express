@@ -33,6 +33,19 @@ describe('LinkSnip - Standard API Features', () => {
     assert.strictEqual(updated?.unique_clicks, 2);
   });
 
+  it('records clicks with a direct referrer when the request referrer is malformed', () => {
+    const link = linkService.createLink('https://example.com/malformed-referrer');
+
+    assert.doesNotThrow(() => {
+      linkService.recordClick(link.id, 'not a URL', '127.0.0.1');
+    });
+
+    const click = db.prepare(
+      'SELECT referrer FROM click_logs WHERE link_id = ? ORDER BY id DESC LIMIT 1'
+    ).get(link.id) as any;
+    assert.strictEqual(click.referrer, 'direct');
+  });
+
   it('calculateConversionRate preserves fractional percentages', () => {
     const rate1 = linkService.calculateConversionRate(7, 10);
     assert.strictEqual(rate1, 70);
@@ -69,6 +82,18 @@ describe('LinkSnip - Standard API Features', () => {
 
     assert.strictEqual(activePage.pagination.total, 3, 'Active view total should only count active links');
     assert.strictEqual(archivedPage.pagination.total, 2, 'Archived view total should only count archived links');
+  });
+
+  it('searches across all matching links before applying pagination', () => {
+    db.exec('DELETE FROM click_logs; DELETE FROM links;');
+
+    for (let i = 0; i < 12; i++) {
+      linkService.createLink(`https://example.com/search-${i}`, `search-${i}`);
+    }
+
+    const result = linkService.getLinks(1, 10, false, 'search-0');
+    assert.strictEqual(result.pagination.total, 1);
+    assert.deepStrictEqual(result.data.map((link) => link.short_code), ['search-0']);
   });
 });
 

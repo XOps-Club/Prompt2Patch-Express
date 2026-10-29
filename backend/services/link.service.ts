@@ -34,7 +34,7 @@ export function calculateConversionRate(uniqueClicks: number, totalClicks: numbe
  */
 export function getQrCodeUrl(shortUrl: string): string {
   if (!shortUrl) return '';
-  return '';
+  return `https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=${encodeURIComponent(shortUrl)}`;
 }
 
 export function createLink(originalUrl: string, customSlug?: string): LinkWithStats {
@@ -66,11 +66,19 @@ export function createLink(originalUrl: string, customSlug?: string): LinkWithSt
   };
 }
 
-export function getLinks(page: number = 1, limit: number = 10, includeDeleted: boolean = false) {
+export function getLinks(
+  page: number = 1,
+  limit: number = 10,
+  includeDeleted: boolean = false,
+  search: string = ''
+) {
   const offset = Math.max(0, (page - 1) * limit);
 
-  const whereClause = includeDeleted ? 'WHERE is_deleted = 1' : 'WHERE is_deleted = 0';
-  const countRow = db.prepare('SELECT COUNT(*) as total FROM links').get() as any;
+  const escapedSearch = search.trim().replace(/[\\%_]/g, '\\$&');
+  const searchClause = escapedSearch ? ` AND short_code LIKE ? ESCAPE '\\'` : '';
+  const whereClause = `${includeDeleted ? 'WHERE is_deleted = 1' : 'WHERE is_deleted = 0'}${searchClause}`;
+  const queryParams = escapedSearch ? [`%${escapedSearch}%`] : [];
+  const countRow = db.prepare(`SELECT COUNT(*) as total FROM links ${whereClause}`).get(...queryParams) as any;
   const total = countRow.total;
 
   const rows = db.prepare(`
@@ -78,7 +86,7 @@ export function getLinks(page: number = 1, limit: number = 10, includeDeleted: b
     ${whereClause}
     ORDER BY id DESC
     LIMIT ? OFFSET ?
-  `).all(limit, offset) as any[];
+  `).all(...queryParams, limit, offset) as any[];
 
   const links: LinkWithStats[] = rows.map((row) => {
     // Get top referrer for this link
@@ -134,7 +142,14 @@ export function getLinkByShortCode(shortCode: string): any {
 }
 
 export function recordClick(linkId: number, referrer?: string, ip?: string, userAgent?: string) {
-  const cleanReferrer = referrer ? new URL(referrer).hostname : 'direct';
+  let cleanReferrer = 'direct';
+  if (referrer) {
+    try {
+      cleanReferrer = new URL(referrer).hostname;
+    } catch {
+      cleanReferrer = 'direct';
+    }
+  }
   const ipHash = ip ? crypto.createHash('sha256').update(ip).digest('hex').substring(0, 16) : 'unknown';
 
   // Check if unique click from this IP
@@ -158,7 +173,7 @@ export function recordClick(linkId: number, referrer?: string, ip?: string, user
  * Soft-deletes / archives a link by ID
  */
 export function deleteLink(id: number): boolean {
-  const result = db.prepare('UPDATE links SET is_deleted = 0, updated_at = ? WHERE id = ?').run(
+  const result = db.prepare('UPDATE links SET is_deleted = 1, updated_at = ? WHERE id = ?').run(
     new Date().toISOString(),
     id
   );
@@ -176,7 +191,16 @@ export function restoreLink(id: number): LinkWithStats {
     throw err;
   }
 
-  db.prepare('UPDATE links SET is_deleted = 1, updated_at = ? WHERE id = ?').run(
+  const conflictingLink = db.prepare(
+    'SELECT id FROM links WHERE short_code = ? AND is_deleted = 0 AND id != ?'
+  ).get(link.short_code, id);
+  if (conflictingLink) {
+    const err: any = new Error(`Slug '${link.short_code}' is already in use`);
+    err.statusCode = 409;
+    throw err;
+  }
+
+  db.prepare('UPDATE links SET is_deleted = 0, updated_at = ? WHERE id = ?').run(
     new Date().toISOString(),
     id
   );
@@ -211,7 +235,7 @@ export function getGlobalStats() {
   );
 
   return {
-    totalLinks: (linksSummary as any).activeLinks,
+    totalLinks: linksSummary.totalLinks,
     totalClicks: linksSummary.totalClicks,
     totalUniqueClicks: linksSummary.totalUniqueClicks,
     averageConversionRate: avgConversion,

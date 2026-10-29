@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { useCreateLink, getQrCodeUrl } from '../services/linkService.js';
+import { useCreateLink, copyToClipboard, getQrCodeUrl } from '../services/linkService.js';
 import { ShortenInputSchema } from '../schemas/link.schema.js';
 import type { LinkItem } from '../schemas/link.schema.js';
 import { Link2, Copy, Check, ExternalLink, SlidersHorizontal, QrCode, X, Zap, AlertTriangle } from 'lucide-react';
@@ -42,11 +42,15 @@ export const ShortenCard: React.FC = () => {
 
   const fullShortUrl = createdLink ? `${window.location.origin}/${createdLink.short_code}` : '';
 
-  const handleCopy = () => {
+  const handleCopy = async () => {
     if (!fullShortUrl) return;
-    navigator.clipboard.writeText(fullShortUrl);
-    setCopied(true);
-    setTimeout(() => setCopied(false), 2000);
+    try {
+      await copyToClipboard(fullShortUrl);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    } catch (err: any) {
+      setValidationError(err.message || 'Unable to copy link');
+    }
   };
 
   return (
@@ -210,7 +214,7 @@ export const ShortenCard: React.FC = () => {
                 <button
                   type="button"
                   className="btn-secondary"
-                  onClick={() => setShowQrModal(false)}
+                  onClick={() => setShowQrModal(true)}
                   style={{ padding: '0.5rem 0.7rem' }}
                   title="View QR Code"
                 >
@@ -262,7 +266,7 @@ export const ShortenCard: React.FC = () => {
 
             <div style={{ background: '#fff', padding: '1.25rem', borderRadius: '12px', display: 'inline-block', marginBottom: '1rem' }}>
               <img
-                src={`https://api.qrserver.com/v1/create-qr-code/?size=180x180&data=${encodeURIComponent(fullShortUrl)}`}
+                src={getQrCodeUrl(fullShortUrl).replace('200x200', '180x180')}
                 alt="QR Code"
                 width={180}
                 height={180}

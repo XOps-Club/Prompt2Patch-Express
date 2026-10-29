@@ -35,7 +35,7 @@ app.get('/:code', (req: Request, res: Response) => {
         <body style="font-family: sans-serif; display: flex; justify-content: center; align-items: center; height: 100vh; background: #0f172a; color: #f8fafc;">
           <div style="text-align: center;">
             <h1 style="font-size: 2rem; margin-bottom: 0.5rem;">404 - Link Not Found</h1>
-            <p style="color: #94a3b8;">The short link "<b>${code}</b>" does not exist or has been archived.</p>
+            <p style="color: #94a3b8;">This short link does not exist or has been archived.</p>
           </div>
         </body>
       </html>
