@@ -1,7 +1,13 @@
 import { z } from 'zod';
 
 export const CreateLinkSchema = z.object({
-  originalUrl: z.string().url('Invalid URL format. Please include http:// or https://'),
+  originalUrl: z
+    .string()
+    .url('Invalid URL format. Please include http:// or https://')
+    .refine((value) => {
+      const protocol = new URL(value).protocol;
+      return protocol === 'http:' || protocol === 'https:';
+    }, 'Invalid URL format. Please include http:// or https://'),
   customSlug: z
     .string()
     .trim()
@@ -17,10 +23,15 @@ export const PaginationQuerySchema = z.object({
   limit: z.coerce.number().int().positive().max(100).default(10),
   includeDeleted: z
     .preprocess((val) => {
-      if (typeof val === 'string') return val === 'true' || val === '1';
-      return Boolean(val);
+      if (typeof val === 'string') {
+        if (val === 'true' || val === '1') return true;
+        if (val === 'false' || val === '0') return false;
+        return val;
+      }
+      return val;
     }, z.boolean())
-    .default(false)
+    .default(false),
+  search: z.string().trim().max(100).default('')
 });
 
 export const LinkSchema = z.object({

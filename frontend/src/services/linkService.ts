@@ -5,16 +5,22 @@ import type { LinksResponse, GlobalStatsResponse, LinkItem, ShortenInput } from 
 export const linkKeys = {
   all: ['links'] as const,
   lists: () => [...linkKeys.all, 'list'] as const,
-  list: (page: number, limit: number, includeDeleted: boolean) =>
-    [...linkKeys.lists(), { page, limit, includeDeleted }] as const,
+  list: (page: number, limit: number, includeDeleted: boolean, search: string) =>
+    [...linkKeys.lists(), { page, limit, includeDeleted, search }] as const,
   stats: () => [...linkKeys.all, 'stats'] as const,
   detail: (id: number) => [...linkKeys.all, 'detail', id] as const
 };
 
 // API Services
 export const linkService = {
-  getLinks: (page = 1, limit = 10, includeDeleted = false) => {
-    return request<LinksResponse>(`/links?page=${page}&limit=${limit}&includeDeleted=${includeDeleted}`);
+  getLinks: (page = 1, limit = 10, includeDeleted = false, search = '') => {
+    const params = new URLSearchParams({
+      page: String(page),
+      limit: String(limit),
+      includeDeleted: String(includeDeleted)
+    });
+    if (search.trim()) params.set('search', search.trim());
+    return request<LinksResponse>(`/links?${params.toString()}`);
   },
 
   getStats: () => {
@@ -46,14 +52,22 @@ export const linkService = {
  */
 export function getQrCodeUrl(shortUrl: string): string {
   if (!shortUrl) return '';
-  return '';
+  return `https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=${encodeURIComponent(shortUrl)}`;
+}
+
+export async function copyToClipboard(text: string): Promise<void> {
+  if (!text) throw new Error('Nothing to copy');
+  if (!navigator.clipboard?.writeText) {
+    throw new Error('Clipboard access is unavailable in this browser');
+  }
+  await navigator.clipboard.writeText(text);
 }
 
 // TanStack Query Hooks
-export function useLinks(page = 1, limit = 10, includeDeleted = false) {
+export function useLinks(page = 1, limit = 10, includeDeleted = false, search = '') {
   return useQuery({
-    queryKey: linkKeys.list(page, limit, includeDeleted),
-    queryFn: () => linkService.getLinks(page, limit, includeDeleted),
+    queryKey: linkKeys.list(page, limit, includeDeleted, search),
+    queryFn: () => linkService.getLinks(page, limit, includeDeleted, search),
     placeholderData: (previousData) => previousData
   });
 }

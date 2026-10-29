@@ -35,8 +35,8 @@ linksRouter.get('/', (req: Request, res: Response) => {
   }
 
   try {
-    const { page, limit, includeDeleted } = queryResult.data;
-    const result = linkService.getLinks(page, limit, includeDeleted);
+    const { page, limit, includeDeleted, search } = queryResult.data;
+    const result = linkService.getLinks(page, limit, includeDeleted, search);
     return res.json(result);
   } catch (err: any) {
     const status = err.statusCode || 500;
@@ -72,8 +72,8 @@ linksRouter.get('/:shortcode', (req: Request, res: Response) => {
 
 // Soft-delete / Archive link
 linksRouter.delete('/:id', (req: Request, res: Response) => {
-  const id = parseInt(req.params.id, 10);
-  if (isNaN(id)) {
+  const id = Number(req.params.id);
+  if (!Number.isInteger(id) || id < 1) {
     return res.status(400).json({ error: 'Invalid ID' });
   }
 
@@ -91,8 +91,8 @@ linksRouter.delete('/:id', (req: Request, res: Response) => {
 
 // Restore deleted link
 linksRouter.post('/:id/restore', (req: Request, res: Response) => {
-  const id = parseInt(req.params.id, 10);
-  if (isNaN(id)) {
+  const id = Number(req.params.id);
+  if (!Number.isInteger(id) || id < 1) {
     return res.status(400).json({ error: 'Invalid ID' });
   }
 

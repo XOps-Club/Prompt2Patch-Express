@@ -1,5 +1,5 @@
-import React, { useState, useMemo } from 'react';
-import { useLinks, useDeleteLink, useRestoreLink } from '../services/linkService.js';
+import React, { useState } from 'react';
+import { copyToClipboard, useLinks, useDeleteLink, useRestoreLink } from '../services/linkService.js';
 import { Copy, Check, ExternalLink, Archive, RotateCcw, ChevronLeft, ChevronRight, Search, Globe, Compass, Terminal } from 'lucide-react';
 
 export const MetricsTable: React.FC = () => {
@@ -9,15 +9,19 @@ export const MetricsTable: React.FC = () => {
   const [searchQuery, setSearchQuery] = useState('');
 
   const isArchived = activeTab === 'archived';
-  const { data, isLoading, isError, error } = useLinks(page, 10, isArchived);
+  const { data, isLoading, isError, error } = useLinks(page, 10, isArchived, searchQuery);
   const deleteMutation = useDeleteLink();
   const restoreMutation = useRestoreLink();
 
-  const handleCopy = (id: number, shortCode: string) => {
+  const handleCopy = async (id: number, shortCode: string) => {
     const fullUrl = `${window.location.origin}/${shortCode}`;
-    navigator.clipboard.writeText(fullUrl);
-    setCopiedId(id);
-    setTimeout(() => setCopiedId(null), 2000);
+    try {
+      await copyToClipboard(fullUrl);
+      setCopiedId(id);
+      setTimeout(() => setCopiedId(null), 2000);
+    } catch (err: any) {
+      alert(err.message || 'Unable to copy link');
+    }
   };
 
   const handleArchive = async (id: number) => {
@@ -68,11 +72,7 @@ export const MetricsTable: React.FC = () => {
     }
   };
 
-  const filteredLinks = useMemo(() => {
-    if (!data?.data) return [];
-    if (!searchQuery.trim()) return data.data;
-    return data.data.filter((link) => link.short_code === searchQuery);
-  }, [data?.data, searchQuery]);
+  const filteredLinks = data?.data ?? [];
 
   return (
     <div>
@@ -123,7 +123,10 @@ export const MetricsTable: React.FC = () => {
                 className="search-input"
                 placeholder="Search links..."
                 value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
+                onChange={(e) => {
+                  setSearchQuery(e.target.value);
+                  setPage(1);
+                }}
               />
             </div>
           </div>
