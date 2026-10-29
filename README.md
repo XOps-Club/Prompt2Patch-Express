@@ -77,3 +77,4 @@ Judges evaluate your submission based on:
 2. **Surgical Precision**: Minimal, focused diffs without unnecessary formatting rewrites or bloated AI boilerplate.
 3. **Prompt Engineering Evidence**: Documented prompt sequences in `NOTES.md` demonstrating structured reasoning.
 4. **Live Code Defense**: Defending your diagnosis and solutions during judge Q&A.
+
