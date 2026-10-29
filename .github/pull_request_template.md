@@ -1,29 +1,25 @@
 ### Team Information
-- **Team Name**: 
+- **Team Name**: CapsLock
 - **Repository**: LinkSnip (`patch1`)
 - **Team Members**:
-  1. 
-  2. 
-  3. 
+  1. Aditya Raj
+  2. Bhuvan Gouda C H
+  3. Jeysuriya R
 
 ---
 
 ### 1. Root Cause Summary
-*Briefly describe the issues identified in the codebase and why they occurred.*
+
+Use the same active-versus-archived filter for both the page query and the count query. Calculate totalPages from that filtered count, then rerun the pagination test in link.service.ts.
 
 ---
 
 ### 2. Solutions & Fixes Implemented
-*Summarize the code modifications made to resolve the issues.*
 
 ---
 
 ### 3. Verification & Test Evidence
-*Paste the terminal output of `npm test` verifying that all test suites pass:*
 
-```bash
-# Paste `npm test` output here
-```
 
 ---
 
